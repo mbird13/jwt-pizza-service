@@ -61,7 +61,7 @@ jobs:
       - name: Tests
         run: npm test
 
-      - name: set version
+      - name: Set version
         id: set_version
         run: |
           version=$(date +'%Y%m%d.%H%M%S')
@@ -69,6 +69,15 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           printf '{"version": "%s" }' "$version" > src/version.json
           cat src/version.json  # Print the file contents
+          
+          # Commit and push version.json to the repository
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add src/version.json
+          git commit -m "Update version.json with version $version [CI skip]" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update coverage
         run: |
