@@ -1,10 +1,10 @@
 const request = require('supertest');
-const app = require('../src/service');
+const app = require('../service.js');
 
 const testUser = { name: 'pizza diner', email: 'reg@test.com', password: 'a' };
 let testUserAuthToken;
 
-const { Role, DB } = require('../src/database/database.js');
+const { Role, DB } = require('../database/database.js');
 
 async function createAdminUser() {
   let user = { password: 'toomanysecrets', roles: [{ role: Role.Admin }] };
