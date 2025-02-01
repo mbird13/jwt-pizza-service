@@ -76,8 +76,8 @@ test('logout', async () => {
 });
 
 test('update user', async () => {
-  user = await createDinerUser();
-  newInfo = { userId: user.id, email: 'reg@test.com', password: 'newPassword' };
+  let user = await createDinerUser();
+  let newInfo = { userId: user.id, email: 'reg@test.com', password: 'newPassword' };
   newInfo.email = Math.random().toString(36).substring(2, 12) + '@test.com';
   const admin = await createAdminUser();
   const adminLoginRes = await request(app).put('/api/auth').send(admin);
@@ -88,11 +88,9 @@ test('update user', async () => {
 });
 
 test('update user unauthorized', async () => {
-  user = await createDinerUser();
-  newInfo = { userId: user.id, email: 'reg@test.com', password: 'newPassword' };
+  let user = await createDinerUser();
+  let newInfo = { userId: user.id, email: 'reg@test.com', password: 'newPassword' };
   newInfo.email = Math.random().toString(36).substring(2, 12) + '@test.com';
-  const admin = await createAdminUser();
-  const adminLoginRes = await request(app).put('/api/auth').send(admin);
   const updateRes = await request(app).put(`/api/auth/${user.id}`).set('Authorization', `Bearer ${user.token}`).send(newInfo);
   expect(updateRes.status).toBe(401);
 });
