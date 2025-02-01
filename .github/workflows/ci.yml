@@ -68,7 +68,7 @@ jobs:
           echo "version=$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           printf '{"version": "%s" }' "$version" > src/version.json
-          echo src/version.json
+          cat src/version.json  # Print the file contents
 
       - name: Update coverage
         run: |
