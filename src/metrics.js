@@ -15,7 +15,7 @@ let revenue = 0;
 const activeUsers = new Set();
 
 function sendMetricsPeriodically(period) {
-    const timer = setInterval(() => {
+    setInterval(() => {
       try {
 
         systemMetrics();
