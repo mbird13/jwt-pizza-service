@@ -7,19 +7,20 @@ let getRequests = 0;
 let postRequests = 0;
 let putRequests = 0;
 let deleteRequests = 0;
+let authorized = 0;
+let unauthorized = 0;
+let fulfilled = 0;
+let failed = 0;
+let revenue = 0;
+const activeUsers = new Set();
 
 function sendMetricsPeriodically(period) {
     const timer = setInterval(() => {
       try {
-        const buf = "";
-        // httpMetrics(buf);
-        // systemMetrics(buf);
-        // userMetrics(buf);
-        // purchaseMetrics(buf);
-        // authMetrics(buf);
 
         systemMetrics();
         httpMetrics();
+        activeUserMetric();
 
         const metric = {
             resourceMetrics: [
@@ -62,6 +63,11 @@ function httpMetrics() {
     addMetric('DELETE', deleteRequests, 'sum', '1');
 }
 
+function activeUserMetric() {
+    addMetric('active_users', activeUsers.size, 'gauge', '1');
+    activeUsers.clear();
+}
+
 function systemMetrics() {
     const cpuUsage = getCpuUsagePercentage();
     const memoryUsage = getMemoryUsagePercentage();
@@ -71,7 +77,7 @@ function systemMetrics() {
         gauge: {
             dataPoints: [
             {
-                asInt: Math.round(cpuUsage),
+                asDouble: cpuUsage,
                 timeUnixNano: Date.now() * 1000000,
                 attributes: [
                 {
@@ -91,7 +97,7 @@ function systemMetrics() {
         gauge: {
             dataPoints: [
             {
-                asInt: Math.round(memoryUsage),
+                asDouble: memoryUsage,
                 timeUnixNano: Date.now() * 1000000,
                 attributes: [
                 {
@@ -107,7 +113,6 @@ function systemMetrics() {
 
 async function requestTracker(req, res, next) {
     requests++;
-    //sendMetricToGrafana('requests', req.method, 'sum', '1');
     if (req.method === 'GET') {
         getRequests++;
     } else if (req.method === 'POST') {
@@ -145,26 +150,35 @@ async function requestTracker(req, res, next) {
     }
 
     metrics.push(metric);
-
-    // const body = JSON.stringify(metric);
-    // fetch(`${config.url}`, {
-    //     method: 'POST',
-    //     body: body,
-    //     headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
-    // })
-    //     .then((response) => {
-    //     if (!response.ok) {
-    //         response.text().then((text) => {
-    //         console.error(`Failed to push metrics data to Grafana: ${text}\n${body}`);
-    //         });
-    //     } else {
-    //         console.log(`Pushed ${metricName}`);
-    //     }
-    //     })
-    //     .catch((error) => {
-    //     console.error('Error pushing metrics:', error);
-    //     });
 }
+
+function addDoubleMetric(metricName, metricValue, type, unit) {
+    const metric = {
+        name: metricName,
+        unit: unit,
+        [type]: {
+        dataPoints: [
+            {
+            asDouble: metricValue,
+            timeUnixNano: Date.now() * 1000000,
+            attributes: [
+                {
+                    key: "source",
+                    value: { "stringValue": "jwt-pizza-service" }
+                }
+            ]
+            },
+        ],
+        }
+    };
+    if (type === 'sum') {
+        metric[type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
+        metric[type].isMonotonic = true;
+    }
+
+    metrics.push(metric);
+}
+
 
 function sendMetricToGrafana(metric) {
     const body = JSON.stringify(metric);
@@ -187,56 +201,45 @@ function sendMetricToGrafana(metric) {
         });
 }
 
-// function sendMetricToGrafana(metricName, metricValue, type, unit) {
-//     const metric = {
-//       resourceMetrics: [
-//         {
-//           scopeMetrics: [
-//             {
-//               metrics: [
-//                 {
-//                   name: metricName,
-//                   unit: unit,
-//                   [type]: {
-//                     dataPoints: [
-//                       {
-//                         asInt: metricValue,
-//                         timeUnixNano: Date.now() * 1000000,
-//                       },
-//                     ],
-//                   },
-//                 },
-//               ],
-//             },
-//           ],
-//         },
-//       ],
-//     };
-//     if (type === 'sum') {
-//         metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
-//         metric.resourceMetrics[0].scopeMetrics[0].metrics[0][type].isMonotonic = true;
-//     }
+function trackAuth(status, userId) {
+    if (status === 'authorized') {
+        authorized++;
+        activeUsers.add(userId);
+        addMetric(status, authorized, 'sum', '1');
+    } else {
+        unauthorized++;
+        addMetric(status, unauthorized, 'sum', '1');
+    }
+}
 
-//     const body = JSON.stringify(metric);
-//     fetch(`${config.url}`, {
-//         method: 'POST',
-//         body: body,
-//         headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
-//     })
-//         .then((response) => {
-//         if (!response.ok) {
-//             response.text().then((text) => {
-//             console.error(`Failed to push metrics data to Grafana: ${text}\n${body}`);
-//             });
-//         } else {
-//             console.log(`Pushed ${metricName}`);
-//         }
-//         })
-//         .catch((error) => {
-//         console.error('Error pushing metrics:', error);
-//         });
-// }
+async function trackRequestLatency(req, res, next) {
+    const start = Date.now();
+    const send = res.send;
+    res.send = function (body) {
+        const end = Date.now();
+        const latency = end - start;
+        addMetric('request_latency', latency, 'gauge', 'ms');
+        res.send = send;
+        res.send(body);
+    }
+    next();
+}
+
+function trackOrders(status) {
+    if (status === 'fulfilled') {
+        fulfilled++;
+        addMetric(status, fulfilled, 'sum', '1');
+    } else {
+        failed++;
+        addMetric(status, failed, 'sum', '1');
+    }
+}
+
+function trackRevenue(items) {
+    revenue += items.reduce((total, item) => total + item.price, 0);
+    addDoubleMetric('revenue', revenue, 'sum', '1');
+}
   
 sendMetricsPeriodically(10000);
 
-module.exports = { requestTracker}
+module.exports = { requestTracker, trackAuth, addMetric, trackRequestLatency, trackOrders, trackRevenue }
