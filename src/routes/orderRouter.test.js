@@ -57,7 +57,7 @@ test('get orders', async () => {
   expect(ordersRes.body).toMatchObject({dinerId: testUser.id});
 });
 
-test('creat order', async () => {
+test('create order', async () => {
   const order = { franchiseId: 1, storeId: 1, items: [{ menuId: 1, description: 'Veggie', price: 0.05 }] };
   const orderRes = await request(app).post('/api/order').set('Authorization', `Bearer ${testUserAuthToken}`).send(order);
   expect(orderRes.status).toBe(200);
