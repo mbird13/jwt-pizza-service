@@ -4,6 +4,8 @@ const config = require('../config.js');
 const { StatusCodeError } = require('../endpointHelper.js');
 const { Role } = require('../model/model.js');
 const dbModel = require('./dbModel.js');
+const logger = require('../logger.js');
+const logType = 'database';
 class DB {
   constructor() {
     this.initialized = this.initializeDatabase();
@@ -286,6 +288,10 @@ class DB {
 
   async query(connection, sql, params) {
     const [results] = await connection.execute(sql, params);
+    const logData = {
+      sql: sql,
+    };
+    logger.log('info', logType, logData);
     return results;
   }
 
@@ -329,6 +335,10 @@ class DB {
 
         if (!dbExists) {
           console.log('Successfully created database');
+          const logData = {
+            msg: 'Successfully created database',
+          };
+          logger.log('info', logType, logData);
         }
 
         for (const statement of dbModel.tableCreateStatements) {
@@ -344,6 +354,12 @@ class DB {
       }
     } catch (err) {
       console.error(JSON.stringify({ message: 'Error initializing database', exception: err.message, connection: config.db.connection }));
+      const logData = {
+         message: 'Error initializing database', 
+         exception: err.message, 
+         connection: config.db.connection,
+      };
+      logger.log('error', logType, logData);
     }
   }
 
