@@ -33,6 +33,8 @@ beforeAll(async () => {
 
   testUser.email = Math.random().toString(36).substring(2, 12) + '@test.com';
   const registerRes = await request(app).post('/api/auth').send(testUser);
+  console.log(registerRes);
+  console.log('Register response:', registerRes.body);
   testUserAuthToken = registerRes.body.token;
   testUser.id = registerRes.body.user.id;
   expectValidJwt(testUserAuthToken);
