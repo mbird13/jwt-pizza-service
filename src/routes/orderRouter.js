@@ -4,7 +4,7 @@ const { Role, DB } = require('../database/database.js');
 const { authRouter } = require('./authRouter.js');
 const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
 const metrics = require('../metrics.js');
-//const logger = require('../logger.js');
+const logger = require('../logger.js');
 
 const orderRouter = express.Router();
 
@@ -92,15 +92,15 @@ orderRouter.post(
     metrics.addMetric('order_fulfillment_time', end - start, 'gauge', 'ms');
     const j = await r.json();
 
-    // const logData = {
-    //   path: r.url,
-    //   method: 'POST',
-    //   statusCode: r.status,
-    //   reqBody: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
-    //   resBody: JSON.stringify(r.body),
-    // };
-    // const level = logger.statusToLogLevel(r.status);
-    // logger.log(level, 'factory', logData);
+    const logData = {
+      path: r.url,
+      method: 'POST',
+      statusCode: r.status,
+      reqBody: JSON.stringify({ diner: { id: req.user.id, name: req.user.name, email: req.user.email }, order }),
+      resBody: JSON.stringify(r.body),
+    };
+    const level = logger.statusToLogLevel(r.status);
+    logger.log(level, 'factory', logData);
 
     if (r.ok) {
       metrics.trackOrders('fulfilled');
