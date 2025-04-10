@@ -33,7 +33,7 @@ apiRouter.use('/docs', (req, res) => {
   res.json({
     version: version.version,
     endpoints: [...authRouter.endpoints, ...orderRouter.endpoints, ...franchiseRouter.endpoints],
-    //config: { factory: config.factory.url, db: config.db.connection.host },
+    config: { factory: config.factory.url}, //db: config.db.connection.host },
   });
 });
 
