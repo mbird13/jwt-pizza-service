@@ -84,6 +84,7 @@ test('delete franchise', async () => {
 test('delete franchise fail', async () => {
   const admin = await createAdminUser();
   const adminLoginRes = await request(app).put('/api/auth').send(admin);
+  expect(adminLoginRes.status).toBe(200);
   const franchise = await createFranchise();
   const deleteRes = await request(app).delete(`/api/franchise/${franchise.id}`).set('Authorization', `Bearer ${testUserAuthToken}`).send();
   expect(deleteRes.status).toBe(403);
